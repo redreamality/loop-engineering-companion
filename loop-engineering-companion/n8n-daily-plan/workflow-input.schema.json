@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/loop-engineering/n8n-daily-plan/input.schema.json",
+  "title": "Daily plan workflow input",
+  "type": "object",
+  "required": ["business_date", "timezone", "rule_version", "tasks", "busy_slots"],
+  "properties": {
+    "business_date": {"type": "string", "format": "date"},
+    "timezone": {"const": "Asia/Vladivostok"},
+    "rule_version": {"type": "string", "minLength": 1},
+    "scenario": {"enum": ["normal", "duplicate", "transient_failure", "persistent_failure"]},
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "status", "due_at", "owner", "waiting_on", "updated_at", "source_url"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "title": {"type": "string", "minLength": 1},
+          "status": {"enum": ["open", "in_progress", "blocked", "completed", "cancelled"]},
+          "due_at": {"type": ["string", "null"]},
+          "owner": {"type": ["string", "null"]},
+          "waiting_on": {"type": ["string", "null"]},
+          "updated_at": {"type": "string"},
+          "source_url": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "busy_slots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["start", "end"],
+        "properties": {
+          "start": {"type": "string"},
+          "end": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

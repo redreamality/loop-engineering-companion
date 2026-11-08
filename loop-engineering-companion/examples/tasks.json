@@ -1,0 +1,24 @@
+[
+  {
+    "id": "T-104",
+    "title": "确认发布范围",
+    "status": "open",
+    "due_at": "2026-08-15",
+    "owner": "Remy"
+  },
+  {
+    "id": "T-207",
+    "title": "等待客户确认",
+    "status": "open",
+    "due_at": "2026-08-14",
+    "owner": "Remy",
+    "waiting_on": "客户 A"
+  },
+  {
+    "id": "T-301",
+    "title": "补全复盘记录",
+    "status": "open",
+    "due_at": null,
+    "owner": null
+  }
+]

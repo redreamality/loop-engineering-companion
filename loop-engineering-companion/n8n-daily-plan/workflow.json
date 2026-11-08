@@ -1,0 +1,187 @@
+{
+  "id": "LoopDailyPlanV1",
+  "name": "Loop Engineering - Daily Plan Draft v1",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "Manual Test Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-1480, 180]
+    },
+    {
+      "parameters": {
+        "rule": {"interval": [{"field": "cronExpression", "expression": "30 8 * * 1-5"}]}
+      },
+      "id": "22222222-2222-4222-8222-222222222222",
+      "name": "Schedule Trigger 08:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [-1480, -40]
+    },
+    {
+      "parameters": {
+        "jsCode": "const businessDate = $now.setZone('Asia/Vladivostok').toFormat('yyyy-MM-dd');\nreturn [{ json: {\n  triggered_at: $now.toISO(),\n  business_date: businessDate,\n  timezone: 'Asia/Vladivostok',\n  rule_version: 'daily-plan-rules-v1',\n  task_id: `daily-plan:${businessDate}:v1`,\n  scenario: $env.LE_TEST_SCENARIO ?? 'normal'\n} }];"
+      },
+      "id": "33333333-3333-4333-8333-333333333333",
+      "name": "Build Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1240, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const state = $getWorkflowStaticData('node');\nstate.readAttempts = (state.readAttempts ?? 0) + 1;\nif ($json.scenario === 'transient_failure' && state.readAttempts === 1) {\n  throw new Error('SIMULATED_HTTP_503');\n}\nif ($json.scenario === 'persistent_failure') {\n  throw new Error('SIMULATED_HTTP_503_PERSISTENT');\n}\nconst tasks = [\n  { id: 'T-104', title: '确认发布范围', status: 'open', due_at: `${$json.business_date}T18:00:00+10:00`, owner: 'user-01', waiting_on: null, updated_at: `${$json.business_date}T07:50:00+10:00`, source_url: 'https://example.invalid/tasks/T-104' },\n  { id: 'T-207', title: '等待客户确认', status: 'in_progress', due_at: `${$json.business_date}T09:00:00+10:00`, owner: 'user-01', waiting_on: 'customer-a', updated_at: `${$json.business_date}T07:45:00+10:00`, source_url: 'https://example.invalid/tasks/T-207' },\n  { id: 'T-301', title: '补全复盘记录', status: 'open', due_at: null, owner: null, waiting_on: null, updated_at: `${$json.business_date}T07:40:00+10:00`, source_url: 'https://example.invalid/tasks/T-301' }\n];\nreturn [{ json: { ...$json, source_read_at: $now.toISO(), source_version: 'fixture-v1', tasks } }];"
+      },
+      "id": "44444444-4444-4444-8444-444444444444",
+      "name": "Read Tasks - Replace with Read Only Credential",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1020, 60],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "onError": "stopWorkflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "const busySlots = [\n  { start: `${$json.business_date}T10:00:00+10:00`, end: `${$json.business_date}T11:00:00+10:00` }\n];\nreturn [{ json: { ...$json, busy_slots: busySlots, calendar_read_at: $now.toISO() } }];"
+      },
+      "id": "55555555-5555-4555-8555-555555555555",
+      "name": "Read Busy Slots - Replace with Read Only Credential",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-800, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allowed = ['id','title','status','due_at','owner','waiting_on','updated_at','source_url'];\nconst sanitized = $json.tasks.map((task) => Object.fromEntries(allowed.map((key) => [key, task[key] ?? null])));\nconst eligible = sanitized.filter((task) => !['completed','cancelled'].includes(task.status));\nconst excluded_items = sanitized.filter((task) => ['completed','cancelled'].includes(task.status)).map((task) => ({ source_id: task.id, title: task.title, reason: `状态为 ${task.status}` }));\nreturn [{ json: { ...$json, tasks: sanitized, eligible, excluded_items } }];"
+      },
+      "id": "66666666-6666-4666-8666-666666666666",
+      "name": "Allowlist and Filter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-580, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const state = $getWorkflowStaticData('global');\nstate.tasks ??= {};\nconst existing = state.tasks[$json.task_id];\nif (existing && ['awaiting_review','completed'].includes(existing.status)) {\n  existing.duplicate_trigger_count = (existing.duplicate_trigger_count ?? 0) + 1;\n  return [];\n}\nstate.tasks[$json.task_id] = { task_id: $json.task_id, status: 'discovered', rule_version: $json.rule_version, business_date: $json.business_date };\nreturn [{ json: { ...$json, task_status: 'discovered' } }];"
+      },
+      "id": "77777777-7777-4777-8777-777777777777",
+      "name": "Atomic Upsert Task - Fixture Store",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-360, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const runId = `run-${$execution.id}`;\nreturn [{ json: { ...$json, run_id: runId, run_status: 'running', run_started_at: $now.toISO() } }];"
+      },
+      "id": "88888888-8888-4888-8888-888888888888",
+      "name": "New Run ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-140, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = (task, reason) => ({ source_id: task.id, title: task.title, reason });\nconst draft = { priority_items: [], schedulable_items: [], missing_information: [], excluded_items: [...$json.excluded_items], warnings: [] };\nfor (const task of $json.eligible) {\n  if (!task.owner || !task.due_at) draft.missing_information.push(item(task, '负责人或截止缺失'));\n  else if (task.waiting_on) draft.schedulable_items.push(item(task, `等待 ${task.waiting_on}，只允许生成跟进建议`));\n  else if (task.due_at.slice(0, 10) <= $json.business_date) draft.priority_items.push(item(task, '已到期且当前可行动'));\n  else draft.schedulable_items.push(item(task, '未到期，可安排'));\n}\nreturn [{ json: { ...$json, draft } }];"
+      },
+      "id": "99999999-9999-4999-8999-999999999999",
+      "name": "Agent Draft Only - Deterministic Fixture",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [80, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const required = ['priority_items','schedulable_items','missing_information','excluded_items','warnings'];\nconst keys = Object.keys($json.draft);\nfor (const key of required) if (!Array.isArray($json.draft[key])) throw new Error(`SCHEMA_MISSING_OR_INVALID:${key}`);\nfor (const key of keys) if (!required.includes(key)) throw new Error(`SCHEMA_UNKNOWN_FIELD:${key}`);\nfor (const group of required.slice(0, 4)) {\n  for (const item of $json.draft[group]) {\n    const itemKeys = Object.keys(item);\n    if (!['source_id','title','reason'].every((key) => typeof item[key] === 'string' && item[key])) throw new Error(`SCHEMA_INVALID_ITEM:${group}`);\n    if (itemKeys.some((key) => !['source_id','title','reason'].includes(key))) throw new Error(`SCHEMA_UNKNOWN_ITEM_FIELD:${group}`);\n  }\n}\nreturn [{ json: { ...$json, schema_validation: { passed: true, schema_version: 'draft-2020-12-v1' } } }];"
+      },
+      "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": "JSON Schema Validate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const handled = new Set(['priority_items','schedulable_items','missing_information','excluded_items'].flatMap((field) => $json.draft[field].map((item) => item.source_id)));\nconst expected = new Set($json.tasks.map((task) => task.id));\nconst missing = [...expected].filter((id) => !handled.has(id));\nif (missing.length) throw new Error(`DETERMINISTIC_COVERAGE_FAILED:${missing.join(',')}`);\nreturn [{ json: { ...$json, deterministic_checks: { passed: true, rule_ids: ['coverage-v1','identity-v1','waiting-v1'] } } }];"
+      },
+      "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "name": "Deterministic Checks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst artifactVersion = `${$json.run_id}:draft:v1`;\nconst artifactHash = crypto.createHash('sha256').update(JSON.stringify($json.draft)).digest('hex');\nreturn [{ json: { ...$json, artifact_version: artifactVersion, artifact_hash: artifactHash, artifact_saved_at: $now.toISO() } }];"
+      },
+      "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "name": "Save Versioned Artifact",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ...$json, approval: { decision: 'awaiting_review', approver: null, reason: null, valid_until: null, artifact_version: $json.artifact_version, artifact_hash: $json.artifact_hash } } }];"
+      },
+      "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "name": "Approval Package - No Auto Approval",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const decision = $json.approval.decision;\nconst nextState = decision === 'approved' ? 'completed' : decision === 'rejected' ? 'rejected' : decision === 'modified' ? 'running' : 'awaiting_review';\nif (decision === 'approved' && ($json.approval.artifact_version !== $json.artifact_version || $json.approval.artifact_hash !== $json.artifact_hash)) throw new Error('STALE_APPROVAL');\nreturn [{ json: { ...$json, next_state: nextState } }];"
+      },
+      "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      "name": "Decision Route",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const state = $getWorkflowStaticData('global');\nif (state.tasks?.[$json.task_id]) {\n  state.tasks[$json.task_id].status = $json.next_state;\n  state.tasks[$json.task_id].current_run_id = $json.run_id;\n  state.tasks[$json.task_id].artifact_version = $json.artifact_version;\n  state.tasks[$json.task_id].artifact_hash = $json.artifact_hash;\n}\nreturn [{ json: { task_id: $json.task_id, run_id: $json.run_id, status: $json.next_state, artifact_version: $json.artifact_version, artifact_hash: $json.artifact_hash, schema_validation: $json.schema_validation, deterministic_checks: $json.deterministic_checks, warnings: $json.draft.warnings } }];"
+      },
+      "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      "name": "Finalize Run and Task",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 60]
+    }
+  ],
+  "connections": {
+    "Manual Test Trigger": {"main": [[{"node": "Build Envelope", "type": "main", "index": 0}]]},
+    "Schedule Trigger 08:30": {"main": [[{"node": "Build Envelope", "type": "main", "index": 0}]]},
+    "Build Envelope": {"main": [[{"node": "Read Tasks - Replace with Read Only Credential", "type": "main", "index": 0}]]},
+    "Read Tasks - Replace with Read Only Credential": {"main": [[{"node": "Read Busy Slots - Replace with Read Only Credential", "type": "main", "index": 0}]]},
+    "Read Busy Slots - Replace with Read Only Credential": {"main": [[{"node": "Allowlist and Filter", "type": "main", "index": 0}]]},
+    "Allowlist and Filter": {"main": [[{"node": "Atomic Upsert Task - Fixture Store", "type": "main", "index": 0}]]},
+    "Atomic Upsert Task - Fixture Store": {"main": [[{"node": "New Run ID", "type": "main", "index": 0}]]},
+    "New Run ID": {"main": [[{"node": "Agent Draft Only - Deterministic Fixture", "type": "main", "index": 0}]]},
+    "Agent Draft Only - Deterministic Fixture": {"main": [[{"node": "JSON Schema Validate", "type": "main", "index": 0}]]},
+    "JSON Schema Validate": {"main": [[{"node": "Deterministic Checks", "type": "main", "index": 0}]]},
+    "Deterministic Checks": {"main": [[{"node": "Save Versioned Artifact", "type": "main", "index": 0}]]},
+    "Save Versioned Artifact": {"main": [[{"node": "Approval Package - No Auto Approval", "type": "main", "index": 0}]]},
+    "Approval Package - No Auto Approval": {"main": [[{"node": "Decision Route", "type": "main", "index": 0}]]},
+    "Decision Route": {"main": [[{"node": "Finalize Run and Task", "type": "main", "index": 0}]]}
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Vladivostok",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  },
+  "versionId": "12345678-1234-4234-8234-1234567890ab",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "loop-engineering-companion"
+  },
+  "tags": []
+}

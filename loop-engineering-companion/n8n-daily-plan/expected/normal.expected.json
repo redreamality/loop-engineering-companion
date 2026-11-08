@@ -1,0 +1,11 @@
+{
+  "task_id": "daily-plan:2026-08-24:v1",
+  "task_count": 1,
+  "run_count": 1,
+  "task_status": "awaiting_review",
+  "priority_source_ids": ["T-104"],
+  "waiting_source_ids": ["T-207"],
+  "missing_source_ids": ["T-301"],
+  "warnings": [],
+  "schema_valid": true
+}

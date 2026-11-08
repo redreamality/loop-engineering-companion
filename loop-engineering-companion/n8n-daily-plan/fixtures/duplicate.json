@@ -1,0 +1,8 @@
+{
+  "business_date": "2026-08-24",
+  "timezone": "Asia/Vladivostok",
+  "rule_version": "daily-plan-rules-v1",
+  "scenario": "duplicate",
+  "tasks": [],
+  "busy_slots": []
+}

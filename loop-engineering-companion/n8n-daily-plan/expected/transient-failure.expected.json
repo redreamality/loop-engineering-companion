@@ -1,0 +1,8 @@
+{
+  "task_id": "daily-plan:2026-08-25:v1",
+  "first_attempt_status": "retryable_failed",
+  "recovered_attempt_status": "awaiting_review",
+  "persistent_failure_status": "manual_handoff",
+  "max_attempts": 2,
+  "max_elapsed_seconds": 300
+}

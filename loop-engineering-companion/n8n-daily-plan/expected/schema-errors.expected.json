@@ -1,0 +1,7 @@
+{
+  "unknown_input_field": "rejected",
+  "unknown_output_field": "rejected",
+  "missing_warnings": "rejected",
+  "missing_source_id": "rejected",
+  "invalid_status": "rejected"
+}

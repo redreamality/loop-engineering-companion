@@ -1,0 +1,11 @@
+{
+  "operation_id": "op-8421",
+  "task_id": "task-391",
+  "business_object": "customer-thread-72",
+  "recipient": "approved-contact-id",
+  "content_hash": "sha256:...",
+  "approval_id": "approval-912",
+  "policy_version": "contact-v6",
+  "idempotency_key": "thread-72:reply:message-188",
+  "expires_at": "2026-09-04T16:00:00+10:00"
+}

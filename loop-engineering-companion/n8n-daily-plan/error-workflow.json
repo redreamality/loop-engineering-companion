@@ -1,0 +1,39 @@
+{
+  "id": "LoopDailyPlanErrorV1",
+  "name": "Loop Engineering - Daily Plan Error Route v1",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "10101010-1010-4010-8010-101010101010",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [-320, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = String($json.execution?.error?.message ?? $json.error?.message ?? 'UNCLASSIFIED_ERROR');\nlet status = 'manual_handoff';\nlet retry = false;\nif (/SCHEMA_|missing|required|invalid json/iu.test(message)) status = 'needs_input';\nelse if (/401|403|permission|forbidden/iu.test(message)) status = 'failed_permanent';\nelse if (/429|503|5\\d\\d|timeout|ECONN/iu.test(message)) { status = 'retryable_failed'; retry = true; }\nelse if (/ACTION_STATUS_UNKNOWN/iu.test(message)) status = 'action_status_unknown';\nreturn [{ json: {\n  workflow_id: $json.workflow?.id ?? null,\n  execution_id: $json.execution?.id ?? null,\n  failed_node: $json.execution?.lastNodeExecuted ?? null,\n  task_id: $json.execution?.customData?.task_id ?? null,\n  run_id: $json.execution?.customData?.run_id ?? null,\n  error_summary: message.slice(0, 300),\n  status,\n  retry_allowed: retry,\n  retry_limit: retry ? 2 : 0,\n  retry_total_limit_seconds: retry ? 300 : 0,\n  recorded_at: $now.toISO()\n} }];"
+      },
+      "id": "20202020-2020-4020-8020-202020202020",
+      "name": "Classify and Redact Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-80, 0]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {"main": [[{"node": "Classify and Redact Error", "type": "main", "index": 0}]]}
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Vladivostok",
+    "saveManualExecutions": true
+  },
+  "versionId": "abcdefab-cdef-4abc-8def-abcdefabcdef",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "loop-engineering-companion"
+  },
+  "tags": []
+}

@@ -1,0 +1,41 @@
+{
+  "business_date": "2026-08-24",
+  "timezone": "Asia/Vladivostok",
+  "rule_version": "daily-plan-rules-v1",
+  "scenario": "normal",
+  "tasks": [
+    {
+      "id": "T-104",
+      "title": "确认发布范围",
+      "status": "open",
+      "due_at": "2026-08-24T18:00:00+10:00",
+      "owner": "user-01",
+      "waiting_on": null,
+      "updated_at": "2026-08-23T16:20:00+10:00",
+      "source_url": "https://example.invalid/tasks/T-104"
+    },
+    {
+      "id": "T-207",
+      "title": "等待客户确认",
+      "status": "in_progress",
+      "due_at": "2026-08-23T17:00:00+10:00",
+      "owner": "user-01",
+      "waiting_on": "customer-a",
+      "updated_at": "2026-08-23T15:10:00+10:00",
+      "source_url": "https://example.invalid/tasks/T-207"
+    },
+    {
+      "id": "T-301",
+      "title": "补全复盘记录",
+      "status": "open",
+      "due_at": null,
+      "owner": null,
+      "waiting_on": null,
+      "updated_at": "2026-08-22T09:00:00+10:00",
+      "source_url": "https://example.invalid/tasks/T-301"
+    }
+  ],
+  "busy_slots": [
+    {"start": "2026-08-24T10:00:00+10:00", "end": "2026-08-24T11:00:00+10:00"}
+  ]
+}
